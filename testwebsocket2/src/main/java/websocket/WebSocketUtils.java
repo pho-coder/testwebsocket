@@ -9,11 +9,15 @@ import org.java_websocket.handshake.ServerHandshake;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
 /**
  * Created by phoenix on 7/3/17.
@@ -56,20 +60,31 @@ public class WebSocketUtils extends WebSocketClient {
     }
 
     public static void main( String[] args ) throws URISyntaxException {
-        WebSocketImpl.DEBUG = true;
+//        WebSocketImpl.DEBUG = true;
         WebSocketUtils c = new WebSocketUtils( new URI( "wss://be.huobi.com/ws" )); // more about drafts here: http://github.com/TooTallNate/Java-WebSocket/wiki/Drafts
-//        SSLContext sslContext = null;
-//        try {
-//            sslContext = SSLContext.getInstance( "TLS" );
-//        } catch (NoSuchAlgorithmException e) {
-//            e.printStackTrace();
-//        }
-//        try {
-//            sslContext.init( null, null, null );
-//        } catch (KeyManagementException e) {
-//            e.printStackTrace();
-//        }
-        SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
+        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+            return new java.security.cert.X509Certificate[] {};
+        }
+
+            public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            }
+
+            public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+            }
+        } };
+        SSLContext sslContext = null;
+        try {
+            sslContext = SSLContext.getInstance( "TLS" );
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        try {
+            sslContext.init( null, trustAllCerts, new java.security.SecureRandom() );
+        } catch (KeyManagementException e) {
+            e.printStackTrace();
+        }
+        SSLSocketFactory factory = sslContext.getSocketFactory();
         try {
             c.setSocket(factory.createSocket());
         } catch (IOException e) {
