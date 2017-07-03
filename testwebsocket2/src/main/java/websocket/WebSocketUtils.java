@@ -1,5 +1,6 @@
 package websocket;
 
+import com.alibaba.fastjson.JSONObject;
 import org.java_websocket.WebSocketImpl;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.drafts.Draft;
@@ -14,6 +15,7 @@ import javax.net.ssl.X509TrustManager;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
@@ -41,7 +43,23 @@ public class WebSocketUtils extends WebSocketClient {
     public void onMessage( String message ) {
         System.out.println( "received: " + message );
     }
+    @Override
+    public void onMessage(ByteBuffer socketBuffer) {
+        try {
+            String marketStr = CommonUtils.byteBufferToString(socketBuffer);
+            String market = CommonUtils.uncompress(marketStr);
+            if (market.contains("ping")) {
+                System.out.println(market.replace("ping", "pong"));
+                // Client 心跳
+                this.send(market.replace("ping", "pong"));
+            } else {
+                System.out.println(" market:" + market);
 
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     @Override
     public void onFragment( Framedata fragment ) {
         System.out.println( "received fragment: " + new String( fragment.getPayloadData().array() ) );
@@ -95,5 +113,12 @@ public class WebSocketUtils extends WebSocketClient {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+        // 订阅数据深度
+        SubModel subModel1 = new SubModel();
+        subModel1.setSub("market.ethcny.depth.step1");
+        subModel1.setId(10001L);
+        c.send(JSONObject.toJSONString(subModel1));
+        c.isConnecting();
     }
 }
